@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { QUEUE } from '@vetcare/contracts';
+import { QUEUE } from './shared/contracts';
 import { workerDataSourceOptions } from './shared/data-source';
 import { OutboxDispatcherService } from './outbox/outbox-dispatcher.service';
 import { NotificationProcessor } from './processors/notification.processor';

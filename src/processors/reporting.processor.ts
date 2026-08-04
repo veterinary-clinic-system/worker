@@ -4,7 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
-import { JOB, QUEUE, RefreshMaterializedViewsJob } from '@vetcare/contracts';
+import { JOB, QUEUE, RefreshMaterializedViewsJob } from '../shared/contracts';
 
 const ALL_VIEWS = ['mv_revenue_daily', 'mv_ai_accuracy_daily'];
 

@@ -1,29 +1,23 @@
-# Tien trinh nen BullMQ. Build context la thu muc goc cua monorepo (xem docker-compose.yml).
-# Worker deploy tach roi api de co the scale rieng va restart ma khong dut request nguoi dung.
+# Tien trinh nen BullMQ. Build context la CHINH thu muc nay (xem docker-compose.yml
+# trong veterinary-clinic-backend/) - moi tien trinh la mot repo doc lap.
+# Worker deploy tach roi backend de co the scale rieng va restart ma khong dut request.
 
 FROM node:20-alpine AS build
-WORKDIR /repo
+WORKDIR /app
 
-COPY package.json ./
-COPY packages/contracts/package.json packages/contracts/
-COPY apps/worker/package.json apps/worker/
-RUN npm install --workspace @vetcare/worker --workspace @vetcare/contracts --include-workspace-root
+COPY package.json package-lock.json ./
+RUN npm ci
 
-COPY packages/contracts packages/contracts
-COPY apps/worker apps/worker
-RUN npm run build --workspace @vetcare/contracts \
- && npm run build --workspace @vetcare/worker
+COPY . .
+RUN npm run build
 
 FROM node:20-alpine AS runtime
-WORKDIR /repo
+WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json ./
-COPY packages/contracts/package.json packages/contracts/
-COPY apps/worker/package.json apps/worker/
-RUN npm install --omit=dev --workspace @vetcare/worker --workspace @vetcare/contracts --include-workspace-root
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-COPY --from=build /repo/packages/contracts/dist packages/contracts/dist
-COPY --from=build /repo/apps/worker/dist apps/worker/dist
+COPY --from=build /app/dist ./dist
 
-CMD ["node", "apps/worker/dist/main.js"]
+CMD ["node", "dist/main.js"]

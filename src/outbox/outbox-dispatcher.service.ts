@@ -3,7 +3,7 @@ import { Interval } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { DataSource } from 'typeorm';
-import { JOB, QUEUE, SendAppointmentReminderJob } from '@vetcare/contracts';
+import { JOB, QUEUE, SendAppointmentReminderJob } from '../shared/contracts';
 
 interface OutboxRow {
   id: string;
