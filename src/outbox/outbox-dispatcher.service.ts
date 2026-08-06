@@ -16,6 +16,21 @@ interface OutboxRow {
 const BATCH_SIZE = 50;
 
 /**
+ * Cac loai su kien co nguoi nhan la KHACH HANG qua SMS/Zalo.
+ *
+ * Bang outbox chua ca nhung su kien noi bo (`INVENTORY_LOW_STOCK`, `VACCINATION_DUE`...)
+ * ma nguoi nhan la NHAN VIEN - nhung su kien do duoc backend ghi thang vao
+ * `staff_notifications` trong chinh transaction nghiep vu (P10-T5), khong di qua day.
+ *
+ * TRUOC P10 KHONG CO DANH SACH NAY va do la mot loi that: moi dong outbox deu bi dung
+ * thanh mot job nhac lich hen, ke ca canh bao ton kho. Cac su kien do khong co
+ * `appointmentId` nen job nhan chuoi rong, roi processor chay
+ * `INSERT INTO notifications (appointment_id, ...) VALUES ('', ...)` va vo vi '' khong
+ * phai uuid - that bai, thu lai nam lan, cuoi cung nam lai trong hang doi that bai.
+ */
+const CUSTOMER_FACING_EVENT_TYPES = new Set(['APPOINTMENT_CREATED']);
+
+/**
  * Doc bang outbox roi day sang BullMQ - nua sau cua mau Transactional Outbox
  * (Phan IV.2 tai lieu kien truc).
  *
@@ -56,7 +71,15 @@ export class OutboxDispatcherService {
 
         if (rows.length === 0) return;
 
+        let queued = 0;
         for (const row of rows) {
+          // Su kien noi bo van duoc danh dau da xu ly o duoi: chung DA duoc phuc vu
+          // (backend ghi thang vao `staff_notifications`), nen de chung nam lai mai
+          // trong outbox chi lam bang phinh len va che khuat cac su kien that su ket.
+          if (!CUSTOMER_FACING_EVENT_TYPES.has(row.type)) {
+            continue;
+          }
+
           const job: SendAppointmentReminderJob = {
             appointmentId: String(row.payload.appointmentId ?? ''),
             recipientPhone: String(row.payload.recipientPhone ?? ''),
@@ -64,6 +87,7 @@ export class OutboxDispatcherService {
             dedupeKey: row.dedupe_key,
           };
 
+          queued += 1;
           await this.notificationQueue.add(JOB.SEND_APPOINTMENT_REMINDER, job, {
             // jobId = dedupeKey: BullMQ tu bo qua job trung id, lop chan trung thu hai.
             jobId: row.dedupe_key,
@@ -79,7 +103,9 @@ export class OutboxDispatcherService {
           [rows.map((r) => r.id)],
         );
 
-        this.logger.log(`Da day ${rows.length} su kien outbox sang hang doi`);
+        this.logger.log(
+          `Da xu ly ${rows.length} su kien outbox (${queued} day sang hang doi gui khach)`,
+        );
       });
     } catch (error) {
       // Khong nem tiep: mot vong that bai khong duoc lam chet worker, vong sau thu lai.
